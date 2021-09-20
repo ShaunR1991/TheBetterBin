@@ -1,0 +1,233 @@
+// This #include statement was automatically added by the Particle IDE.
+#include <HC_SR04.h>
+// This #include statement was automatically added by the Particle IDE.
+//#include <ParticleWebLog.h>
+#include "Particle.h"
+
+// The event name to publish data to the webhook, and then to the excel sheet.
+const char *eventName = "Better Bin";
+
+//Define the variables for ultrasonic sensor
+#define trigPin      D10
+#define echoPin      D11
+#define trigPin2     D6
+#define echoPin2     D8
+#define echoPin3     D4
+#define trigPin3     D5
+
+//define an open delay time
+#define openDelay   3
+#define binHeight   0
+
+//We are initiating the triggerpins and the echo pins of both ultrasonic sensors
+SYSTEM_THREAD(ENABLED);
+HC_SR04 rangefinder = HC_SR04(trigPin, echoPin);
+HC_SR04 statusCheckLeft = HC_SR04(trigPin2, echoPin2);
+HC_SR04 statusCheckRight = HC_SR04(trigPin3, echoPin3);
+
+int leftArray[3] = {12,28,0};
+int leftCount = 0;
+int rightArray[3] = {7,26,0}; 
+int rightCount = 0;
+//initiating variables of type double
+//cm tracks the distance detected by the ultrasonic sensor
+double cm = 0.0;
+//calculating volume of both left and right compartment.
+int leftVolume = 0;
+int rightVolume = 0;
+int compartment = 0;
+int wasteLevels = 0;
+int lastLeft = 0;
+int lastRight = 0;
+
+//The flag variable will be used as a reference for the switch statement in script.js on the google spreadsheet
+int flag = -1;
+
+//float status = 0;
+bool leftTrigger = false;
+
+void publishTest();
+
+
+void setup() {
+    //Initiate the output and input of ultrasonic
+    Particle.subscribe("leftButton", leftButton);
+    Particle.subscribe("rightButton", rightButton);
+    Particle.subscribe("openBin", checkStatus);
+    pinMode(trigPin, OUTPUT);
+    pinMode(echoPin, INPUT);
+    pinMode(trigPin2, OUTPUT);
+    pinMode(echoPin2, OUTPUT);
+    
+}
+
+void loop() {
+    delay(1000);
+    cm = rangefinder.getDistanceCM();
+    //If the cm , 10, open the left compartment
+    if (cm < 7)
+    {
+         if (openLeft())
+         {
+            Particle.publish("openBin", "left");
+         }
+    }
+    //otherwise, open the right
+    else if (cm > 10 && cm < 20)
+    {
+        
+        if (openRight())
+         {
+            Particle.publish("openBin", "right");
+         }
+    }
+}
+
+
+//Function for opening the left compartment of the bin. 
+bool openLeft()
+{
+    int distance = 0;
+    int counter = 0;
+    //We set a counter for opening the bin, for example 5. The individual must keep their hand infront of the sensor until the counter reaches 5.
+    //This is done to remove any accidental situations when the individual unwillingly opens the bin
+    do
+    {
+        distance =  rangefinder.getDistanceCM();
+        if (distance < 7)
+        {
+            counter++;
+            delay(1000);
+        }
+        else
+        {
+            return false;
+        }
+    } while (counter < openDelay);
+
+    return true;
+}
+
+//Function for opening the right compartment of the bin. 
+bool openRight()
+{
+    int distance = 0;
+    int counter = 0;
+    //We set a counter for opening the bin, for example 5. The individual must keep their hand infront of the sensor until the counter reaches 5.
+    //This is done to remove any accidental situations when the individual unwillingly opens the bin
+    do
+    {
+        distance =  rangefinder.getDistanceCM();
+        if (distance > 10 and distance < 20)
+        {
+            counter++;
+            delay(1000);
+        }
+        else
+        {
+            return false;
+        }
+    } while (counter < openDelay);
+    
+    return true;
+}
+
+
+int calcVolume(int compartment){
+    //float status;
+    if (compartment == 1)
+    {
+        //Take left reading
+        //int temp = rand() % 30;
+        
+        leftCount++;
+        if (leftCount > 2)
+        {
+            leftCount = 0;
+        }
+        int temp = leftArray[leftCount];
+        //status = statusCheckLeft.getDistanceCM();
+        //int temp = ((binHeight-(binHeight - status))/binHeight)*30;
+        if (temp < leftVolume)
+        {
+            flag = 2;
+            lastLeft = leftVolume;
+            leftVolume = temp;
+            return lastLeft;
+        }
+        else
+        {
+            flag = 0;
+            leftVolume = temp;
+            return leftVolume;
+        }
+    }
+    if (compartment == 2)
+    {
+        //Take left reading
+        //int temp = rand() % 30;
+        
+        rightCount++;
+        if (rightCount > 2)
+        {
+            rightCount = 0;
+        }
+        int temp = rightArray[rightCount];
+        //status = statusCheckRight.getDistanceCM();
+        //int temp = ((binHeight-(binHeight - status))/binHeight)*30;
+        if (temp < rightVolume)
+        {
+            flag = 3;
+            lastRight = rightVolume;
+            rightVolume = temp;
+            return lastRight;
+        }
+        else
+        {
+            flag = 1;
+            rightVolume = temp;
+            return rightVolume;
+        }
+    }
+    return -1;
+}
+
+//If button to open left compartment is clicked, publish "left" to the console
+void leftButton(const char *event, const char *data)
+{
+    Particle.publish("openBin", "left");
+}
+
+//If button to open left compartment is clicked, publish "right" to the console
+void rightButton(const char *event, const char *data)
+{
+    Particle.publish("openBin", "right");
+}
+
+
+//Checks the current rubbish status of either compartment 1 or 2
+void checkStatus(const char *event, const char *data)
+{
+    if (strcmp(data, "checkLeft") == 0)
+    {
+        //calcVolume();
+        //volume = rand() % 30;
+        compartment = 1;
+        publishTest();
+    }
+    if (strcmp(data, "checkRight") == 0)
+    {
+        //calcVolume();
+        compartment = 2;
+        publishTest();
+    }
+}
+
+//Publishes the data to the google spreadsheet through the webhook Better bin
+void publishTest() {
+    char buf[128];
+    int data = calcVolume(compartment);
+    snprintf(buf,sizeof(buf),"[%d,%d]",flag, data);
+
+    Particle.publish(eventName, buf, PRIVATE);
+}
