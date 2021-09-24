@@ -1,27 +1,22 @@
-// This #include statement was automatically added by the Particle IDE.
 #include <LiquidCrystal_I2C_Spark.h>
-
-// This #include statement was automatically added by the Particle IDE.
 #include <HC_SR04.h>
-// This #include statement was automatically added by the Particle IDE.
-//#include <ParticleWebLog.h>
 #include "Particle.h"
 
 //Define the pin numbers for the ultrasonic sensors
-#define trigPin      D10    //Gesture Sensor
-#define echoPin      D11    //Gesture Sensor
-#define trigPin2     D6     //Left Bin Status Sensor
-#define echoPin2     D8     //Left Bin Status Sensor
-#define echoPin3     D4     //Right Bin Status Sensor
-#define trigPin3     D5     //Right Bin Status Sensor
+#define trigPin D10 //Gesture Sensor
+#define echoPin D11 //Gesture Sensor
+#define trigPin2 D6 //Left Bin Status Sensor
+#define echoPin2 D8 //Left Bin Status Sensor
+#define echoPin3 D4 //Right Bin Status Sensor
+#define trigPin3 D5 //Right Bin Status Sensor
 
 //Gesture bin activation time
-#define openDelay   3   //3 seconds
+#define openDelay 3 //3 seconds
 
 // The event name to publish data to the webhook, and then to the excel sheet.
 const char *eventName = "Better Bin";
 
-//Height of bin used to calculate bin status 
+//Height of bin used to calculate bin status
 const int binHeight = 30;
 
 //Array for lcd commands
@@ -34,9 +29,9 @@ HC_SR04 statusCheckLeft = HC_SR04(trigPin2, echoPin2);  //Left Bin
 HC_SR04 statusCheckRight = HC_SR04(trigPin3, echoPin3); //Right Bin
 
 //Synthetic data for demonstration
-int leftArray[3] = {12,28,0};
+int leftArray[3] = {12, 28, 0};
 int leftCount = 0;
-int rightArray[3] = {7,26,0}; 
+int rightArray[3] = {7, 26, 0};
 int rightCount = 0;
 
 //Holds sensor reading in centimetres
@@ -48,8 +43,8 @@ int rightVolume = 0;
 
 //Holds the data for webapp
 int compartment = 0;
-int lastLeft = 0;   //Last reading for left bin
-int lastRight = 0;  //Last reading for right bin
+int lastLeft = 0;  //Last reading for left bin
+int lastRight = 0; //Last reading for right bin
 
 //Holds data for LCD status
 float leftStatus;
@@ -61,18 +56,19 @@ int flag = -1;
 //float status = 0;
 bool leftTrigger = false;
 
-void setup() {
+void setup()
+{
     //Subscribe to IFTTT buttons
     Particle.subscribe("leftButton", leftButton);
     Particle.subscribe("rightButton", rightButton);
     Particle.subscribe("openBin", checkStatus);
-    
+
     //Initiate echo and trigger pins
     pinMode(trigPin, OUTPUT);
     pinMode(echoPin, INPUT);
     pinMode(trigPin2, OUTPUT);
     pinMode(echoPin2, OUTPUT);
-    
+
     //Initialise LCD screen
     lcd = new LiquidCrystal_I2C(0x27, 16, 2);
     lcd->init();
@@ -80,25 +76,28 @@ void setup() {
     lcd->clear();
 }
 
-void loop() {
+void loop()
+{
     //Wait 1 second between loops
     delay(1000);
-    
+
     //Get distance reading from gesture sensor
     cm = rangefinder.getDistanceCM();
     //If the gesure distance is less than 7cm, open the left compartment
     if (cm < 7)
     {
-        if (openLeft()) Particle.publish("openBin", "left"); //Checks if the gesture has been held for long enough to trigger
+        if (openLeft())
+            Particle.publish("openBin", "left"); //Checks if the gesture has been held for long enough to trigger
     }
     //otherwise, open the right if the gesture distance is between 10 and 20cm.
     else if (cm > 10 && cm < 20)
     {
-        if (openRight()) Particle.publish("openBin", "right"); //Checks if the gesture has been held for long enough to trigger
+        if (openRight())
+            Particle.publish("openBin", "right"); //Checks if the gesture has been held for long enough to trigger
     }
 }
 
-//Function for opening the left compartment of the bin. 
+//Function for opening the left compartment of the bin.
 bool openLeft()
 {
     int distance = 0;
@@ -107,22 +106,22 @@ bool openLeft()
     //This is done to remove any accidental situations when the individual unwillingly opens the bin
     do
     {
-        distance =  rangefinder.getDistanceCM();    //Check distance
-        if (distance < 7)   //If distance remains within left gesture range
+        distance = rangefinder.getDistanceCM(); //Check distance
+        if (distance < 7)                       //If distance remains within left gesture range
         {
-            counter++;      //Increase counter
-            delay(1000);    //Wait 1 second and try again
+            counter++;   //Increase counter
+            delay(1000); //Wait 1 second and try again
         }
         else
         {
-            return false;   //Terminate function
+            return false; //Terminate function
         }
     } while (counter < openDelay);
 
     return true;
 }
 
-//Function for opening the right compartment of the bin. 
+//Function for opening the right compartment of the bin.
 bool openRight()
 {
     int distance = 0;
@@ -131,95 +130,95 @@ bool openRight()
     //This is done to remove any accidental situations when the individual unwillingly opens the bin
     do
     {
-        distance =  rangefinder.getDistanceCM();    //Check Distance
+        distance = rangefinder.getDistanceCM(); //Check Distance
         if (distance > 10 and distance < 20)    //If distance remains within right gesture range
         {
-            counter++;      //Increase counter
-            delay(1000);    //Wait 1 second and try again
+            counter++;   //Increase counter
+            delay(1000); //Wait 1 second and try again
         }
         else
         {
-            return false;   //Terminate function
+            return false; //Terminate function
         }
     } while (counter < openDelay);
-    
+
     return true;
 }
 
 //Calculates the volume of the compartment to send to database
-int calcVolume(int compartment){
+int calcVolume(int compartment)
+{
     //Holds real sensor value
     //float status;
-    if (compartment == 1)   //Left bin
+    if (compartment == 1) //Left bin
     {
         //Take left reading
-        
+
         //Simulate real data by iterating through array
         leftCount++;
         if (leftCount > 2)
         {
             leftCount = 0;
         }
-        
+
         //Get synthetic data
         int temp = leftArray[leftCount];
-        
-        //Get real data and calculate the volume 
+
+        //Get real data and calculate the volume
         //status = statusCheckLeft.getDistanceCM();
         //int temp = ((binHeight-(binHeight - status))/binHeight)*binHeight;
-        
+
         //Returns the flag and data to send to database
-        
+
         //If new value is less than previous value
         if (temp < leftVolume)
         {
-            flag = 2;               //Set flag
-            lastLeft = leftVolume;  //Update previous values
-            leftVolume = temp;      //Update current values
-            return lastLeft;        //Return old status
+            flag = 2;              //Set flag
+            lastLeft = leftVolume; //Update previous values
+            leftVolume = temp;     //Update current values
+            return lastLeft;       //Return old status
         }
         else
         {
-            flag = 0;               //Set flag
-            leftVolume = temp;      //Update current value
-            return leftVolume;      //Return current status
+            flag = 0;          //Set flag
+            leftVolume = temp; //Update current value
+            return leftVolume; //Return current status
         }
-        
     }
     if (compartment == 2)
     {
         //Take right reading
-        
+
         //Simulate real data by iterating through array
         rightCount++;
         if (rightCount > 2)
         {
             rightCount = 0;
         }
-        
+
         //Get synthetic data
         int temp = rightArray[rightCount];
-        
+
         //Get real data and calculat the volume
         //status = statusCheckRight.getDistanceCM();
         //int temp = ((binHeight-(binHeight - status))/binHeight)*binHeight;
-        
+
         //If new value is less than previous value
         if (temp < rightVolume)
         {
-            flag = 3;                   //Set flag
-            lastRight = rightVolume;    //Update previous values
-            rightVolume = temp;         //Update current values
-            return lastRight;           //Return old status
+            flag = 3;                //Set flag
+            lastRight = rightVolume; //Update previous values
+            rightVolume = temp;      //Update current values
+            return lastRight;        //Return old status
         }
         else
         {
-            flag = 1;                   //Set flag
-            rightVolume = temp;         //Update current value
-            return rightVolume;         //Return current status
+            flag = 1;           //Set flag
+            rightVolume = temp; //Update current value
+            return rightVolume; //Return current status
         }
     }
-    return -1;  //Return if error
+    return -1; //Return if error
 }
 
 //If button to open left compartment is clicked, publish "left" to the console
@@ -233,7 +232,6 @@ void rightButton(const char *event, const char *data)
 {
     Particle.publish("openBin", "right");
 }
-
 
 //Checks the current rubbish status of either compartment 1 or 2 then publishes data accordingly
 void checkStatus(const char *event, const char *data)
@@ -254,18 +252,18 @@ void checkStatus(const char *event, const char *data)
 void printStatus()
 {
     //Calculate the bin status % full.
-    leftStatus = (leftVolume/binHeight)*100;
-    rightStatus = (rightVolume/binHeight)*100;
-    
+    leftStatus = (leftVolume / binHeight) * 100;
+    rightStatus = (rightVolume / binHeight) * 100;
+
     //Holds chars for float to string conversion
     char lStatStr[32];
 
     //Reset LCD and set cursor for first row
     lcd->clear();
-    lcd->setCursor(0,0);
-    
+    lcd->setCursor(0, 0);
+
     //If the % value is a single digit print the string as shown
-    if(leftStatus < 10 & leftStatus > 0)
+    if (leftStatus<10 & leftStatus> 0)
     {
         snprintf(lStatStr, sizeof(lStatStr), "Recycling  %.2f%%", leftStatus);
         lcd->print(lStatStr);
@@ -281,21 +279,21 @@ void printStatus()
         snprintf(lStatStr, sizeof(lStatStr), "Recycling %.2f%%", leftStatus);
         lcd->print(lStatStr);
     }
-    
+
     //Holds chars for float to string conversion
     char rStatStr[32];
-    
+
     //Set cursor position to second row
-    lcd->setCursor(0,1);
-    
+    lcd->setCursor(0, 1);
+
     //If the % value is a single digit print the string as shown
-    if(rightStatus < 10 & rightStatus > 0)
+    if (rightStatus<10 & rightStatus> 0)
     {
         snprintf(rStatStr, sizeof(rStatStr), "Waste      %.2f%%", rightStatus);
         lcd->print(rStatStr);
     }
     //If the % value is less than 0 then the bin is empty
-    else if (rightStatus  <= 0)
+    else if (rightStatus <= 0)
     {
         lcd->print("Waste      Empty");
     }
@@ -305,14 +303,14 @@ void printStatus()
         snprintf(rStatStr, sizeof(rStatStr), "Waste     %.2f%%", rightStatus);
         lcd->print(rStatStr);
     }
-    
 }
 
 //Publishes the data to the google spreadsheet through the webhook Better bin
-void publishTest() {
+void publishTest()
+{
     char buf[128];
-    int data = calcVolume(compartment); //Get data and flag
-    snprintf(buf, sizeof(buf),"[%d,%d]", flag, data); //Convert data to correct format
-    printStatus();  //Print data to LCD
-    Particle.publish(eventName, buf, PRIVATE);  //Send to console and then on to database
+    int data = calcVolume(compartment);                //Get data and flag
+    snprintf(buf, sizeof(buf), "[%d,%d]", flag, data); //Convert data to correct format
+    printStatus();                                     //Print data to LCD
+    Particle.publish(eventName, buf, PRIVATE);         //Send to console and then on to database
 }
