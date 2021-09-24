@@ -1,0 +1,75 @@
+//Set analog pins for servos
+#define motorLeft    A1
+#define motorRight   A0
+
+//Set open and close delay for bin lids
+#define openDelay   3000
+#define closeDelay  1000
+
+//Set servo variables
+Servo openLeftBin;
+Servo openRightBin;
+
+void setup() {
+    //Subscribe to Pi event
+    Particle.subscribe("openBin", callServo);
+    
+    //Attach servos to correct pins
+    openLeftBin.attach(motorLeft);
+    openRightBin.attach(motorRight);
+    
+    //Set default servo positions
+    openLeftBin.write(0);
+    delay(500);
+    openRightBin.write(180);
+    delay(500);
+}
+
+void loop() 
+{
+    //no loop
+}
+
+/*
+Function called by Pi event
+If pi event is left, open left bin
+If pi event is right, open right bin
+*/
+void callServo(const char *event, const char *data)
+{
+    if (strcmp(data, "left") == 0)
+    {
+        activateLeftCompartment();
+    }
+    else if (strcmp(data, "right") == 0)
+    {
+        activateRightcompartment();
+    }
+}
+
+//Open left bin
+void activateLeftCompartment() 
+{
+    openRightBin.attach(motorRight);
+    openRightBin.write(90);
+    delay(openDelay);
+    openRightBin.write(180);
+    delay(closeDelay);
+    openRightBin.detach();
+    
+    //Publish that left bin is ready to check the status
+    Particle.publish("openBin", "checkLeft");
+}
+
+//Open right bin
+void activateRightcompartment() {
+    openLeftBin.attach(motorLeft);
+    openLeftBin.write(90);
+    delay(openDelay);
+    openLeftBin.write(0);
+    delay(closeDelay);
+    openLeftBin.detach();
+    
+    //Publish that the right bin is ready to check the status
+    Particle.publish("openBin", "checkRight");
+}
