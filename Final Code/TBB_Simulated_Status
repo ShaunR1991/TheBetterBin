@@ -1,0 +1,107 @@
+// include the library code:
+#include <LiquidCrystal.h>
+
+// initialize the library by associating any needed LCD interface pin
+// with the arduino pin number it is connected to
+const int rs = 12, en = 11, d4 = 5, d5 = 4, d6 = 3, d7 = 2;
+LiquidCrystal lcd(rs, en, d4, d5, d6, d7);
+
+//Set trigger and echo pins for both sensors
+const int triggerPin1 = 8;
+const int echoPin1 = 9;
+const int triggerPin2 = 6;
+const int echoPin2 = 7;
+
+/*
+	ld = Left Distance
+    lf = Left Full
+    rd = Right Distance
+    rf = Right Full
+    
+    These vars are used to display values on the LCD
+*/
+float ld = 0;
+float lf = 0;
+float rd = 0;
+float rf = 0;
+
+//Conversion value for HCSR04
+float cmConvert = 0.01723;
+
+//Take reading from the HCSR04
+long readUltrasonicDistance(int triggerPin, int echoPin)
+{
+    digitalWrite(triggerPin, LOW);
+    delayMicroseconds(2);
+    // Sets the trigger pin to HIGH state for 10 microseconds
+    digitalWrite(triggerPin, HIGH);
+    delayMicroseconds(10);
+    digitalWrite(triggerPin, LOW);
+    // Reads the echo pin, and returns the sound wave travel time in microseconds
+    // Value multiplied by cm conversion value as per library
+    return cmConvert * pulseIn(echoPin, HIGH);
+}
+
+void setup()
+{
+    //Set pinmodes for the sensors
+    pinMode(triggerPin1, OUTPUT);
+    pinMode(echoPin1, INPUT);
+    pinMode(triggerPin2, OUTPUT);
+    pinMode(echoPin2, INPUT);
+    // set up the LCD's number of columns and rows:
+    lcd.begin(16, 2);
+}
+
+void loop()
+{
+    //Initialise variables after each loop
+    ld = 0;
+    rd = 0;
+    lf = 0;
+    rf = 0;
+
+    //Take readings from left and right bin
+    //Value to use is a ratio of how full the bin is
+    ld = readUltrasonicDistance(triggerPin1, echoPin1);
+    lf = (300 - ld) / 3;
+    delay(50);
+    rd = readUltrasonicDistance(triggerPin2, echoPin2);
+    rf = (300 - rd) / 3;
+    delay(50);
+
+    /*
+    	If the value of the percentage is single digits, shift right 1 place
+        If the full value is less than 0, i.e. bin is empty, display empty
+        Else print the percentage full on the right side of the screen
+    */
+    lcd.setCursor(0, 0);
+    if (lf<10 & lf> 0)
+    {
+        lcd.print("Recycling  " + String(lf) + "%");
+    }
+    else if (lf <= 0)
+    {
+        lcd.print("Recycling  Empty");
+    }
+    else
+    {
+        lcd.print("Recycling " + String(lf) + "%");
+    }
+
+    lcd.setCursor(0, 1);
+    if (rf<10 & rf> 0)
+    {
+        lcd.print("Waste      " + String(rf) + "%");
+    }
+    else if (rf <= 0)
+    {
+        lcd.print("Waste      Empty");
+    }
+    else
+    {
+        lcd.print("Waste     " + String(rf) + "%");
+    }
+
+    delay(3000); // Wait for 3 sec
+}
