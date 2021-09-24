@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <base target="_top">
+    <!-- Load the API -->
+    <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+    <script type="text/javascript">
+        google.charts.load('current', { 'packages': ['corechart'] });
+        // Retrieve yearly data from backend on callback
+        google.charts.setOnLoadCallback(getYearlyData);
+
+        //Run the success handler to draw chart using data returned from backend function
+        function getYearlyData() {
+            google.script.run.withSuccessHandler(drawChart).getYearlyData();
+        }
+
+        //Use returned data to draw chart
+        function drawChart(dataReturned) {
+            var data = google.visualization.arrayToDataTable(dataReturned);
+
+            /*
+            Set chart options
+            Title
+            Subtitle
+            Series
+            Axes
+            */
+            var options = {
+                title: 'Yearly Waste Production',
+                subtitle: 'The Better Bin Waste Tracking for Last 12 Months',
+                vAxis: { title: 'Litres of Waste', textStyle: { color: 'white' }, titleTextStyle: { color: 'white' } },
+                hAxis: { title: 'Month', textStyle: { color: 'white' }, titleTextStyle: { color: 'white' } },
+                backgroundColor: '#333',
+                textStyle: { color: 'white' },
+                titleTextStyle: { color: 'white' },
+                legend: { position: 'bottom', textStyle: { color: 'white' } },
+                seriesType: 'bars'
+            };
+
+            //Create and draw the chart
+            var chart = new google.visualization.ComboChart(document.getElementById('chart'));
+
+            chart.draw(data, options);
+        }
+    </script>
+
+
+    <!-- Load the API -->
+    <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+    <script type="text/javascript">
+        google.charts.load('current', { 'packages': ['corechart'] });
+        // Retrieve yearly data from backend on callback
+        google.charts.setOnLoadCallback(getBinStatus);
+
+        //Run the success handler to draw chart using data returned from backend function
+        function getBinStatus() {
+            google.script.run.withSuccessHandler(drawStatus).getBinStatus();
+        }
+
+        //Use returned data to draw chart
+        function drawStatus(dataReturned) {
+            var data = google.visualization.arrayToDataTable(dataReturned);
+
+            /*
+            Set chart options
+            Title
+            Subtitle
+            Series
+            Axes
+            */
+            var options = {
+                title: 'Current Bin Status',
+                vAxis: { title: '% Full', minValue: 0, maxValue: 100, textStyle: { color: 'white' }, titleTextStyle: { color: 'white' } },
+                hAxis: { title: 'Bin', textStyle: { color: 'white' }, titleTextStyle: { color: 'white' } },
+                seriesType: 'bars',
+                backgroundColor: '#333',
+                legend: { position: 'bottom', textStyle: { color: 'white' } },
+                titleTextStyle: { color: 'white' }
+            };
+
+            //Create and draw the chart
+            var chart = new google.visualization.ComboChart(document.getElementById('status'));
+
+            chart.draw(data, options);
+        }
+    </script>
+</head>
+
+<body>
+
+    <body style="background-color:#333;">
+
+        <!-- Prompt user for the number of historial days they want to look at data for -->
+        <div class="top-level-flex">
+            <div class="query-container">
+                <h2>Day Query</h2>
+                <p>Enter the number of days before today you want to look at data for</p>
+                <input id="enterXDays" type="text" /><button onclick="sendXDays()">Set Number of Days To
+                    Return</button><br>
+                <p id="daysLabel"></p>
+                <p id="xDaysBin1Value"></p>
+                <p id="xDaysBin2Value"></p>
+
+                <!-- Prompt user for the month they want to look at data for -->
+                <h2>Month Query</h2>
+                <p>Enter the month (by number, e.g. 2 for February) you want to look at data for</p>
+                <input id="enterMonth" type="text" /><button onclick="sendMonth()">Set Month to Return</button><br>
+
+                <p id="monthLabel"></p>
+                <p id="monthBin1Value"></p>
+                <p id="monthBin2Value"></p>
+            </div>
+            <div class="status-container">
+                <!-- Draw status -->
+                <div id="status" style="width: 520px; height: 230px;"></div>
+            </div>
+        </div>
+
+        <script>
+            //Functions to send and return data to/from backend
+
+            function xDaysBin1(bin1DaysValue) {
+                var bin1Days = document.getElementById("xDaysBin1Value");
+                bin1Days.innerHTML = "Litres of non-recyclable trash generated: " + bin1DaysValue;
+            }
+            function xDaysBin2(bin2DaysValue) {
+                var bin2Days = document.getElementById("xDaysBin2Value");
+                bin2Days.innerHTML = "Litres of recyclable trash generated: " + bin2DaysValue;
+            }
+
+            function monthBin1(bin1MonthValue) {
+                var bin1Month = document.getElementById("monthBin1Value");
+                bin1Month.innerHTML = "Litres of non-recyclable trash generated: " + bin1MonthValue;
+            }
+            function monthBin2(bin2MonthValue) {
+                var bin2Month = document.getElementById("monthBin2Value");
+                bin2Month.innerHTML = "Litres of recyclable trash generated: " + bin2MonthValue;
+            }
+
+            function sendXDays() {
+                var sendValue = document.getElementById("enterXDays").value;
+                google.script.run.setXDays(sendValue);
+
+                //Wait 3 seconds to update
+                setTimeout(function () {
+                    document.getElementById("daysLabel").innerHTML = "Last " + sendValue + " Days of Waste Data";
+                    google.script.run.withSuccessHandler(xDaysBin1).returnBinOneXDays();
+                    google.script.run.withSuccessHandler(xDaysBin2).returnBinTwoXDays();
+                }, 3000);
+
+                document.getElementById("enterXDays").value = null;
+            }
+
+            function sendMonth() {
+                var sendValue = document.getElementById("enterMonth").value;
+                google.script.run.setMonth(sendValue);
+
+                //Take input and return a string month value
+                var monthConv;
+
+                switch (sendValue) {
+                    case "1":
+                        monthConv = "January";
+                        break;
+
+                    case "2":
+                        monthConv = "February";
+                        break;
+
+                    case "3":
+                        monthConv = "March";
+                        break;
+
+                    case "4":
+                        monthConv = "April";
+                        break;
+
+                    case "5":
+                        monthConv = "May";
+                        break;
+
+                    case "6":
+                        monthConv = "June";
+                        break;
+
+                    case "7":
+                        monthConv = "July";
+                        break;
+
+                    case "8":
+                        monthConv = "August";
+                        break;
+
+                    case "9":
+                        monthConv = "September";
+                        break;
+
+                    case "10":
+                        monthConv = "October";
+                        break;
+
+                    case "11":
+                        monthConv = "November";
+                        break;
+
+                    case "12":
+                        monthConv = "December";
+                        break;
+
+                    default:
+                        monthConv = "Invalid Entry";
+                }
+
+                setTimeout(function () {
+                    document.getElementById("monthLabel").innerHTML = monthConv + " Waste Data";
+                    google.script.run.withSuccessHandler(monthBin1).returnBinOneMonth();
+                    google.script.run.withSuccessHandler(monthBin2).returnBinTwoMonth();
+                }, 3000);
+
+                document.getElementById("enterMonth").value = null;
+            }
+
+        </script>
+
+        <!-- Draw chart -->
+        <div id="chart" style="width: 1000px; height: 550px;"></div>
+
+        <style>
+            body {
+                display: flex;
+                align-items: center;
+                flex-direction: column;
+            }
+
+            .query-container {
+                display: inline-block;
+                width: 380px;
+            }
+
+            .status-container {
+                display: inline-block;
+                width: 520px;
+                height: 230px;
+            }
+
+            div,
+            p {
+                color: white !important;
+                font-family: 'Arial';
+                font-size: 14px;
+            }
+        </style>
+
+
+    </body>
+
+</html>
