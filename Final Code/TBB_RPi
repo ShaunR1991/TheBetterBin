@@ -7,8 +7,8 @@
 #define echoPin D11 //Gesture Sensor
 #define trigPin2 D6 //Left Bin Status Sensor
 #define echoPin2 D8 //Left Bin Status Sensor
-#define echoPin3 D4 //Right Bin Status Sensor
-#define trigPin3 D5 //Right Bin Status Sensor
+#define echoPin3 D14 //Right Bin Status Sensor
+#define trigPin3 D15 //Right Bin Status Sensor
 
 //Gesture bin activation time
 #define openDelay 3 //3 seconds
