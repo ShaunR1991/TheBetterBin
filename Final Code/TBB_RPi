@@ -306,7 +306,7 @@ void printStatus()
 }
 
 //Publishes the data to the google spreadsheet through the webhook Better bin
-void publishTest()
+void publish()
 {
     char buf[128];
     int data = calcVolume(compartment);                //Get data and flag
